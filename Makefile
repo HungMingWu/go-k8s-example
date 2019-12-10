@@ -16,16 +16,14 @@ build: clean
 		-X ${PROJECT}/version.Commit=${COMMIT} -X ${PROJECT}/version.BuildTime=${BUILD_TIME}" \
 		-o ${APP}
 
-container: build
-	docker build -t $(APP):$(RELEASE) .
+container:
+	docker build -t $(APP):$(RELEASE) . --build-arg PROJECT=${PROJECT} --build-arg APP=${APP} \
+		--build-arg RELEASE=${RELEASE} --build-arg COMMIT=${COMMIT} --build-arg BUILD_TIME=${BUILD_TIME}
 
 run: container
-	docker stop $(APP):$(RELEASE) || true && docker rm $(APP):$(RELEASE) || true
 	docker run --name ${APP} -p ${PORT}:${PORT} --rm \
 		-e "PORT=${PORT}" \
 		$(APP):$(RELEASE)
-run: build
-	PORT=${PORT} ./${APP}
 
 test:
 	go test -v -race ./...
