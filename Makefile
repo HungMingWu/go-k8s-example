@@ -4,6 +4,7 @@ PORT?=8000
 RELEASE?=0.0.1
 COMMIT?=$(shell git rev-parse --short HEAD)
 BUILD_TIME?=$(shell date -u '+%Y-%m-%d_%H:%M:%S')
+CONTAINER_IMAGE?=hungmingwu/${APP}:${RELEASE}
 
 GOOS?=linux
 GOARCH?=amd64
@@ -25,5 +26,23 @@ run: container
 		-e "PORT=${PORT}" \
 		$(APP):$(RELEASE)
 
+push: container
+	docker tag $(APP):$(RELEASE) $(CONTAINER_IMAGE)
+	docker push $(CONTAINER_IMAGE)
+
 test:
 	go test -v -race ./...
+
+microk8s:
+	for t in $(shell find ./kubernetes -type f -name "*.yaml"); do \
+		cat $$t | \
+			sed -E "s/\{\{(\s*)\.Release(\s*)\}\}/$(RELEASE)/g" | \
+		        sed -E "s/\{\{(\s*)\.ServiceName(\s*)\}\}/$(APP)/g"; \
+	echo ---; \
+	done > tmp.yaml
+	kubectl apply -f tmp.yaml
+
+microk8sstop:
+	kubectl delete deployment/$(APP)
+	kubectl delete svc/$(APP)
+
